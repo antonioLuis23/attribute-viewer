@@ -64,6 +64,7 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
       observer.disconnect();
       cleanupAllLabels();
       updateAllLabels();
+      updateAllBorders();
       startObserver();
     }
   }
