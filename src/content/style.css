@@ -1,0 +1,38 @@
+.testid-overlay-label {
+  position: fixed;
+  background: #550299;
+  width: fit-content !important;
+  color: white;
+  font-size: 10px;
+  padding: 4px 8px;
+  border-radius: 3px;
+  pointer-events: none;
+  /* z-index is set dynamically based on parent element */
+  white-space: nowrap;
+  font-family: monospace;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(85, 2, 153, 0.3);
+}
+
+/* Border for elements with testids */
+.testid-border-highlight {
+  outline: 2px solid rgba(167, 116, 232, 0.6) !important;
+  outline-offset: -2px;
+  border-radius: 4px;
+}
+
+/* Wrapper for disabled elements to enable hover detection */
+.testid-hover-wrapper {
+  display: inline-block;
+  position: relative;
+  /* Inherit all sizing to match wrapped element */
+  width: fit-content;
+  height: fit-content;
+}
+
+/* Selection mode highlight */
+.testid-selection-highlight {
+  outline: 3px solid #00ff00 !important;
+  outline-offset: 2px;
+  background-color: rgba(0, 255, 0, 0.1) !important;
+}

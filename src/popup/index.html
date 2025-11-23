@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TestID Overlay Settings</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="popup-container">
+      <h1>TestID Overlay</h1>
+      <div class="setting-group">
+        <label for="customAttribute">Attribute Name:</label>
+        <div style="display: flex; gap: 8px; align-items: center">
+          <input
+            type="text"
+            id="customAttribute"
+            placeholder="data-testid"
+            style="flex: 1"
+          />
+          <button id="applyAttribute" class="apply-button">Apply</button>
+        </div>
+        <p class="hint">
+          Enter the attribute to display (e.g., data-testid, data-slot)
+        </p>
+      </div>
+
+      <div class="setting-group">
+        <label for="displayMode">Display Mode:</label>
+        <select id="displayMode">
+          <option value="always">Always Show</option>
+          <option value="hover">On Hover</option>
+          <option value="off">Off</option>
+        </select>
+      </div>
+
+      <div class="setting-group">
+        <label class="checkbox-label">
+          <input type="checkbox" id="showBorders" />
+          <span>Highlight elements with the attribute</span>
+        </label>
+      </div>
+      <div class="setting-group">
+        <button id="downloadTestIds" class="download-button">
+          Download Test IDs
+        </button>
+        <p class="hint">Click to select a parent element on the page</p>
+        <p class="hint">Press ESC to cancel selection mode</p>
+      </div>
+    </div>
+    <script type="module" src="popup.ts"></script>
+  </body>
+</html>
