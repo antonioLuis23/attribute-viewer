@@ -23,15 +23,15 @@ interface ExtendedHTMLElement extends HTMLElement {
   };
 }
 
-interface TestIdData {
+interface LocatorData {
   name: string;
   type: string;
   locator: string;
 }
 
 // Current display mode
-let displayMode: DisplayMode = "always";
-let showBorders = false;
+let displayMode: DisplayMode = "hover";
+let showBorders = true;
 let selectionMode = false;
 let hoveredElement: HTMLElement | null = null;
 let customAttribute = "data-testid";
@@ -41,8 +41,8 @@ let selectionOverlay: HTMLDivElement | null = null;
 chrome.storage.sync.get(
   ["displayMode", "showBorders", "customAttribute"],
   (result: StorageSettings) => {
-    displayMode = result.displayMode || "always";
-    showBorders = result.showBorders !== undefined ? result.showBorders : false;
+    displayMode = result.displayMode || "hover";
+    showBorders = result.showBorders !== undefined ? result.showBorders : true;
     customAttribute = result.customAttribute || "data-testid";
     updateAllLabels();
   }
@@ -509,14 +509,14 @@ function handleSelectionClick(event: Event): void {
   // This prevents the download link click from triggering this handler again
   stopSelectionMode();
 
-  // Collect all test IDs within this element
-  const testIds = collectTestIds(parentElement);
+  // Collect all locators within this element
+  const locators = collectLocators(parentElement);
 
   // Download as JSON
-  downloadTestIds(testIds);
+  downloadLocators(locators);
 }
 
-function collectTestIds(parentElement: HTMLElement): TestIdData[] {
+function collectLocators(parentElement: HTMLElement): LocatorData[] {
   // Include the parent element itself if it has the custom attribute
   const allElements: HTMLElement[] = [parentElement];
   console.log("parentElement", parentElement);
@@ -527,7 +527,7 @@ function collectTestIds(parentElement: HTMLElement): TestIdData[] {
   console.log("childElements", childElements);
   allElements.push(...childElements);
 
-  const testIds: TestIdData[] = [];
+  const locators: LocatorData[] = [];
 
   allElements.forEach((el) => {
     const attributeValue = el.getAttribute(customAttribute);
@@ -567,7 +567,7 @@ function collectTestIds(parentElement: HTMLElement): TestIdData[] {
       type = "container";
     }
 
-    testIds.push({
+    locators.push({
       name: attributeValue
         .toLowerCase()
         .replace(/_/g, " ")
@@ -577,20 +577,20 @@ function collectTestIds(parentElement: HTMLElement): TestIdData[] {
     });
   });
 
-  return testIds;
+  return locators;
 }
 
-function downloadTestIds(testIds: TestIdData[]): void {
+function downloadLocators(locators: LocatorData[]): void {
   // Log for debugging
-  console.log("Downloading test IDs:", testIds);
+  console.log("Downloading locators:", locators);
 
-  const json = JSON.stringify(testIds, null, 2);
+  const json = JSON.stringify(locators, null, 2);
   const blob = new Blob([json], { type: "application/json" });
   const url = URL.createObjectURL(blob);
 
   const a = document.createElement("a");
   a.href = url;
-  a.download = `test-ids-${Date.now()}.json`;
+  a.download = `locators-${Date.now()}.json`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

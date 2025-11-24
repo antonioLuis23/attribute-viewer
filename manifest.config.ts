@@ -20,8 +20,5 @@ export default defineManifest({
       matches: ["http://*/*", "https://*/*"],
     },
   ],
-  permissions: ["sidePanel", "contentSettings", "storage", "activeTab"],
-  side_panel: {
-    default_path: "src/sidepanel/index.html",
-  },
+  permissions: ["contentSettings", "storage", "activeTab"],
 });

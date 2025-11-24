@@ -1,7 +1,7 @@
 // Import CSS
 import "./style.css";
 
-// Popup script for TestID Overlay extension
+// Popup script for Locator Overlay extension
 
 type DisplayMode = "always" | "hover" | "off";
 
@@ -24,8 +24,8 @@ const customAttributeInput = document.getElementById(
 const applyAttributeButton = document.getElementById(
   "applyAttribute"
 ) as HTMLButtonElement;
-const downloadTestIdsButton = document.getElementById(
-  "downloadTestIds"
+const downloadLocatorsButton = document.getElementById(
+  "downloadLocators"
 ) as HTMLButtonElement;
 
 // Load current settings
@@ -77,8 +77,8 @@ customAttributeInput.addEventListener("keypress", (e) => {
   }
 });
 
-// Download test IDs button
-downloadTestIdsButton.addEventListener("click", async () => {
+// Download locators button
+downloadLocatorsButton.addEventListener("click", async () => {
   try {
     // Get the active tab
     const [tab] = await chrome.tabs.query({

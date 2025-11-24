@@ -3,45 +3,51 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TestID Overlay Settings</title>
+    <title>Attribute Overlay Settings</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <div class="popup-container">
-      <h1>Attribute Overlay</h1>
+      <h1 class="popup-title">
+        <span class="popup-title-icon" aria-hidden="true"></span>
+        Attribute Viewer
+      </h1>
       <div class="setting-group">
         <label for="customAttribute">Attribute Name:</label>
-        <div style="display: flex; gap: 8px; align-items: center">
+        <div class="attribute-input-row">
           <input
             type="text"
             id="customAttribute"
             placeholder="data-testid"
-            style="flex: 1"
+            value="data-testid"
           />
           <button id="applyAttribute" class="apply-button">Apply</button>
         </div>
-        <p class="hint">
-          Enter the attribute to display (e.g., data-testid, data-slot)
-        </p>
       </div>
 
       <div class="setting-group">
         <label for="displayMode">Display Mode:</label>
         <select id="displayMode">
           <option value="always">Always Show</option>
-          <option value="hover">On Hover</option>
+          <option value="hover" selected>On Hover</option>
           <option value="off">Off</option>
         </select>
       </div>
 
       <div class="setting-group">
         <label class="checkbox-label">
-          <input type="checkbox" id="showBorders" />
+          <input type="checkbox" id="showBorders" checked />
           <span>Highlight elements with the attribute</span>
         </label>
       </div>
       <div class="setting-group">
-        <button id="downloadTestIds" class="download-button">
+        <button id="downloadLocators" class="download-button">
           Download Locators
         </button>
         <p class="hint">Click to select a parent element on the page</p>
