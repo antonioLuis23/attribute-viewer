@@ -30,9 +30,21 @@
   height: fit-content;
 }
 
-/* Selection mode highlight */
+/* Selection mode highlight - old class kept for compatibility */
 .testid-selection-highlight {
   outline: 3px solid #00ff00 !important;
   outline-offset: 2px;
   background-color: rgba(0, 255, 0, 0.1) !important;
+}
+
+/* Selection overlay - smooth animated highlight */
+.testid-selection-overlay {
+  position: fixed;
+  pointer-events: none;
+  z-index: 2147483647;
+  border: 3px solid #00ff00;
+  background-color: rgba(0, 255, 0, 0.1);
+  border-radius: 4px;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 0 2px rgba(0, 255, 0, 0.2);
 }

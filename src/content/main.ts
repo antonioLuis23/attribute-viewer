@@ -35,6 +35,7 @@ let showBorders = false;
 let selectionMode = false;
 let hoveredElement: HTMLElement | null = null;
 let customAttribute = "data-testid";
+let selectionOverlay: HTMLDivElement | null = null;
 
 // Load settings from storage
 chrome.storage.sync.get(
@@ -394,6 +395,12 @@ function startSelectionMode(): void {
   selectionMode = true;
   document.body.style.cursor = "crosshair";
 
+  // Create selection overlay
+  selectionOverlay = document.createElement("div");
+  selectionOverlay.className = "testid-selection-overlay";
+  selectionOverlay.style.display = "none";
+  document.body.appendChild(selectionOverlay);
+
   // Disconnect observer to prevent infinite loops during selection mode
   observer.disconnect();
 
@@ -413,6 +420,7 @@ function startSelectionMode(): void {
   document.addEventListener("mouseover", handleSelectionHover, true);
   document.addEventListener("mouseout", handleSelectionMouseOut, true);
   document.addEventListener("click", handleSelectionClick, true);
+  document.addEventListener("scroll", handleSelectionScroll, true);
 
   // Add ESC key handler
   document.addEventListener("keydown", handleSelectionEscape);
@@ -426,13 +434,17 @@ function stopSelectionMode(): void {
   document.removeEventListener("mouseover", handleSelectionHover, true);
   document.removeEventListener("mouseout", handleSelectionMouseOut, true);
   document.removeEventListener("click", handleSelectionClick, true);
+  document.removeEventListener("scroll", handleSelectionScroll, true);
   document.removeEventListener("keydown", handleSelectionEscape);
 
-  // Remove hover highlight
-  if (hoveredElement) {
-    hoveredElement.classList.remove("testid-selection-highlight");
-    hoveredElement = null;
+  // Remove selection overlay
+  if (selectionOverlay) {
+    selectionOverlay.remove();
+    selectionOverlay = null;
   }
+
+  // Clear hovered element reference
+  hoveredElement = null;
 
   // Restore borders and labels
   updateAllBorders();
@@ -451,23 +463,38 @@ function stopSelectionMode(): void {
 }
 
 function handleSelectionHover(event: Event): void {
-  if (!selectionMode) return;
+  if (!selectionMode || !selectionOverlay) return;
 
   event.stopPropagation();
 
-  // Remove previous highlight
-  if (hoveredElement) {
-    hoveredElement.classList.remove("testid-selection-highlight");
-  }
-
-  // Add highlight to current element
+  // Update hovered element
   hoveredElement = event.target as HTMLElement;
-  hoveredElement.classList.add("testid-selection-highlight");
+
+  // Get element bounds
+  const rect = hoveredElement.getBoundingClientRect();
+
+  // Position and size the overlay to match the element
+  selectionOverlay.style.display = "block";
+  selectionOverlay.style.left = `${rect.left}px`;
+  selectionOverlay.style.top = `${rect.top}px`;
+  selectionOverlay.style.width = `${rect.width}px`;
+  selectionOverlay.style.height = `${rect.height}px`;
 }
 
 function handleSelectionMouseOut(event: Event): void {
   if (!selectionMode) return;
   event.stopPropagation();
+}
+
+function handleSelectionScroll(): void {
+  if (!selectionMode || !selectionOverlay || !hoveredElement) return;
+
+  // Update overlay position when page scrolls
+  const rect = hoveredElement.getBoundingClientRect();
+  selectionOverlay.style.left = `${rect.left}px`;
+  selectionOverlay.style.top = `${rect.top}px`;
+  selectionOverlay.style.width = `${rect.width}px`;
+  selectionOverlay.style.height = `${rect.height}px`;
 }
 
 function handleSelectionClick(event: Event): void {
