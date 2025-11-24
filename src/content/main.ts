@@ -23,6 +23,8 @@ interface ExtendedHTMLElement extends HTMLElement {
   };
 }
 
+const labeledElements = new Set<ExtendedHTMLElement>();
+
 interface LocatorData {
   name: string;
   type: string;
@@ -105,6 +107,7 @@ function createLabel(el: HTMLElement): void {
   label.innerText = attributeValue;
 
   extEl.__testIdLabel = label;
+  labeledElements.add(extEl);
 
   // Calculate and set z-index based on parent element
   const parentZIndex = getComputedZIndex(el);
@@ -169,6 +172,35 @@ function createLabel(el: HTMLElement): void {
   });
 }
 
+function removeLabel(el: HTMLElement): void {
+  const extEl = el as ExtendedHTMLElement;
+  if (!extEl.__testIdLabel) return;
+
+  if (extEl.__hoverHandlers) {
+    const hoverTarget = extEl.__hoverWrapper || el;
+    hoverTarget.removeEventListener("mouseenter", extEl.__hoverHandlers.show);
+    hoverTarget.removeEventListener("mouseleave", extEl.__hoverHandlers.hide);
+    delete extEl.__hoverHandlers;
+  }
+
+  if (extEl.__hoverWrapper) {
+    const wrapper = extEl.__hoverWrapper;
+    const parent = wrapper.parentNode;
+    if (parent) {
+      parent.insertBefore(el, wrapper);
+      wrapper.remove();
+    }
+    delete extEl.__hoverWrapper;
+  }
+
+  extEl.__testIdLabel.remove();
+  delete extEl.__testIdLabel;
+
+  el.classList.remove("testid-border-highlight");
+
+  labeledElements.delete(extEl);
+}
+
 function updateLabelVisibility(el: HTMLElement): void {
   const extEl = el as ExtendedHTMLElement;
   if (!extEl.__testIdLabel) return;
@@ -204,73 +236,36 @@ function updateAllBorders(): void {
 }
 
 function cleanupAllLabels(): void {
-  // Remove all existing labels
-  const labels = document.querySelectorAll(".testid-overlay-label");
-  labels.forEach((label) => {
-    label.remove();
+  labeledElements.forEach((el) => {
+    removeLabel(el);
   });
-
-  // Remove highlight borders from ALL elements (not just those with current attribute)
-  const highlightedElements = document.querySelectorAll(
-    ".testid-border-highlight"
-  );
-  highlightedElements.forEach((el) => {
-    el.classList.remove("testid-border-highlight");
-  });
-
-  // Clean up any existing wrappers
-  const wrappers = document.querySelectorAll(".testid-hover-wrapper");
-  wrappers.forEach((wrapper) => {
-    const parent = wrapper.parentNode;
-    if (parent && wrapper.firstChild) {
-      parent.insertBefore(wrapper.firstChild, wrapper);
-      wrapper.remove();
-    }
-  });
+  labeledElements.clear();
 }
 
 function updateAllLabels(): void {
+  labeledElements.forEach((el) => {
+    const extEl = el as ExtendedHTMLElement;
+    const label = extEl.__testIdLabel;
+    const modeMismatch = label && (label as any).__mode !== displayMode;
+    const attributeMissing = !el.hasAttribute(customAttribute);
+    const removedFromDom = !document.contains(el);
+
+    if (modeMismatch || attributeMissing || removedFromDom) {
+      removeLabel(el);
+    }
+  });
+
   const elements = document.querySelectorAll<HTMLElement>(
     `[${customAttribute}]`
   );
   elements.forEach((el) => {
     const extEl = el as ExtendedHTMLElement;
-    // Remove old label if mode changed
-    if (
-      extEl.__testIdLabel &&
-      (extEl.__testIdLabel as any).__mode !== displayMode
-    ) {
-      // Remove hover event listeners if they exist
-      if (extEl.__hoverHandlers) {
-        // Determine if we need to remove listeners from wrapper or element
-        const hoverTarget = extEl.__hoverWrapper || el;
-        hoverTarget.removeEventListener(
-          "mouseenter",
-          extEl.__hoverHandlers.show
-        );
-        hoverTarget.removeEventListener(
-          "mouseleave",
-          extEl.__hoverHandlers.hide
-        );
-        delete extEl.__hoverHandlers;
-
-        // Remove wrapper if it exists
-        if (extEl.__hoverWrapper) {
-          const wrapper = extEl.__hoverWrapper;
-          const parent = wrapper.parentNode;
-          if (parent) {
-            parent.insertBefore(el, wrapper);
-            wrapper.remove();
-          }
-          delete extEl.__hoverWrapper;
-        }
-      }
-
-      extEl.__testIdLabel.remove();
-      delete extEl.__testIdLabel;
+    if (!extEl.__testIdLabel) {
+      createLabel(el);
+    } else {
+      updateLabelVisibility(el);
+      updateElementBorder(el);
     }
-
-    createLabel(el);
 
     if (extEl.__testIdLabel) {
       (extEl.__testIdLabel as any).__mode = displayMode;
