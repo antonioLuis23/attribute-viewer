@@ -24,6 +24,7 @@ interface ExtendedHTMLElement extends HTMLElement {
 }
 
 const labeledElements = new Set<ExtendedHTMLElement>();
+const TABLE_WRAPPER_CLASS = "testid-table-wrapper";
 
 interface LocatorData {
   name: string;
@@ -94,6 +95,41 @@ function getComputedZIndex(el: HTMLElement): number {
   return maxZIndex;
 }
 
+function ensureTableWrapper(table: HTMLTableElement): HTMLDivElement {
+  const currentParent = table.parentElement;
+  if (currentParent && currentParent.classList.contains(TABLE_WRAPPER_CLASS)) {
+    return currentParent as HTMLDivElement;
+  }
+
+  const wrapper = document.createElement("div");
+  wrapper.className = TABLE_WRAPPER_CLASS;
+
+  const parentNode = table.parentNode;
+  if (parentNode) {
+    parentNode.insertBefore(wrapper, table);
+  } else {
+    document.body.appendChild(wrapper);
+  }
+
+  wrapper.appendChild(table);
+  return wrapper;
+}
+
+function insertLabelForElement(label: HTMLDivElement, el: HTMLElement): void {
+  const tableAncestor = el.closest("table");
+  if (tableAncestor instanceof HTMLTableElement) {
+    const wrapper = ensureTableWrapper(tableAncestor);
+    wrapper.insertBefore(label, tableAncestor);
+    return;
+  }
+
+  if (el.parentNode) {
+    el.parentNode.insertBefore(label, el);
+  } else {
+    document.body.appendChild(label);
+  }
+}
+
 function createLabel(el: HTMLElement): void {
   const extEl = el as ExtendedHTMLElement;
   const attributeValue = el.getAttribute(customAttribute);
@@ -114,11 +150,7 @@ function createLabel(el: HTMLElement): void {
   label.style.zIndex = String(parentZIndex + 1);
 
   // Insert label as sibling to inherit stacking context
-  if (el.parentNode) {
-    el.parentNode.insertBefore(label, el);
-  } else {
-    document.body.appendChild(label);
-  }
+  insertLabelForElement(label, el);
 
   // Set up hover listeners ONLY for hover mode
   if (displayMode === "hover") {

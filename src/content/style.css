@@ -31,6 +31,10 @@
   height: fit-content;
 }
 
+.testid-table-wrapper {
+  display: contents;
+}
+
 /* Selection mode highlight - old class kept for compatibility */
 .testid-selection-highlight {
   outline: 3px solid #00ff00 !important;
