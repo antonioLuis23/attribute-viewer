@@ -14,11 +14,6 @@ export interface ExtendedHTMLElement extends HTMLElement {
     show: () => void;
     hide: () => void;
   };
-  __hoverWrapper?: HTMLDivElement;
-  __lastPosition?: {
-    left: number;
-    top: number;
-  };
 }
 
 export interface LocatorData {

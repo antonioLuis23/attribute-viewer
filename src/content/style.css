@@ -1,7 +1,10 @@
 @import url("https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap");
 
+/* Label positioned above the element using absolute positioning */
 .testid-overlay-label {
-  position: fixed;
+  position: absolute;
+  bottom: 50%;
+  left: 0;
   background: #550299;
   width: fit-content !important;
   color: white;
@@ -11,7 +14,8 @@
   pointer-events: none;
   /* z-index is set dynamically based on parent element */
   white-space: nowrap;
-  font-family: "Montserrat", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: "Montserrat", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
   font-weight: 500;
   box-shadow: 0 2px 8px rgba(85, 2, 153, 0.3);
 }
@@ -20,19 +24,6 @@
 .testid-border-highlight {
   outline: 2px solid rgba(167, 116, 232, 0.6) !important;
   outline-offset: -2px;
-}
-
-/* Wrapper for disabled elements to enable hover detection */
-.testid-hover-wrapper {
-  display: inline-block;
-  position: relative;
-  /* Inherit all sizing to match wrapped element */
-  width: fit-content;
-  height: fit-content;
-}
-
-.testid-table-wrapper {
-  display: contents;
 }
 
 /* Selection mode highlight - old class kept for compatibility */

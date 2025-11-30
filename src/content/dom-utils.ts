@@ -1,7 +1,5 @@
 // DOM utility functions for the attribute viewer extension
 
-import { TABLE_WRAPPER_CLASS } from "./state";
-
 export function getComputedZIndex(el: HTMLElement): number {
   let current: HTMLElement | null = el;
   let maxZIndex = 0;
@@ -23,40 +21,37 @@ export function getComputedZIndex(el: HTMLElement): number {
   return maxZIndex;
 }
 
-export function ensureTableWrapper(table: HTMLTableElement): HTMLDivElement {
-  const currentParent = table.parentElement;
-  if (currentParent && currentParent.classList.contains(TABLE_WRAPPER_CLASS)) {
-    return currentParent as HTMLDivElement;
+/**
+ * Sets up an element for label positioning by ensuring it has position context.
+ * Only modifies position if it's currently static.
+ */
+export function setupElementForLabel(el: HTMLElement): void {
+  const computedPosition = window.getComputedStyle(el).position;
+
+  // Only set position if it's static (not already positioned)
+  if (computedPosition === "static") {
+    // Store original inline position (might be empty string)
+    el.dataset.labelOriginalPosition = el.style.position || "";
+    el.style.position = "relative";
   }
-
-  const wrapper = document.createElement("div");
-  wrapper.className = TABLE_WRAPPER_CLASS;
-
-  const parentNode = table.parentNode;
-  if (parentNode) {
-    parentNode.insertBefore(wrapper, table);
-  } else {
-    document.body.appendChild(wrapper);
-  }
-
-  wrapper.appendChild(table);
-  return wrapper;
 }
 
-export function insertLabelForElement(
+/**
+ * Inserts a label as the first child of an element.
+ */
+export function insertLabelInElement(
   label: HTMLDivElement,
   el: HTMLElement
 ): void {
-  const tableAncestor = el.closest("table");
-  if (tableAncestor instanceof HTMLTableElement) {
-    const wrapper = ensureTableWrapper(tableAncestor);
-    wrapper.insertBefore(label, tableAncestor);
-    return;
-  }
+  el.insertBefore(label, el.firstChild);
+}
 
-  if (el.parentNode) {
-    el.parentNode.insertBefore(label, el);
-  } else {
-    document.body.appendChild(label);
+/**
+ * Cleans up the position style we added to an element.
+ */
+export function cleanupElementPosition(el: HTMLElement): void {
+  if (el.dataset.labelOriginalPosition !== undefined) {
+    el.style.position = el.dataset.labelOriginalPosition;
+    delete el.dataset.labelOriginalPosition;
   }
 }

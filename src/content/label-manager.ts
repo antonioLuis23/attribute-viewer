@@ -1,13 +1,13 @@
 // Label management functions for the attribute viewer extension
 
 import type { ExtendedHTMLElement } from "./types";
+import { state, labeledElements } from "./state";
 import {
-  state,
-  labeledElements,
-  repositionScheduled,
-  setRepositionScheduled,
-} from "./state";
-import { getComputedZIndex, insertLabelForElement } from "./dom-utils";
+  getComputedZIndex,
+  setupElementForLabel,
+  insertLabelInElement,
+  cleanupElementPosition,
+} from "./dom-utils";
 
 export function createLabel(el: HTMLElement): void {
   const extEl = el as ExtendedHTMLElement;
@@ -16,6 +16,9 @@ export function createLabel(el: HTMLElement): void {
 
   // Avoid duplicates
   if (extEl.__testIdLabel) return;
+
+  // Set up element for label positioning (adds position:relative if needed)
+  setupElementForLabel(el);
 
   const label = document.createElement("div");
   label.className = "testid-overlay-label";
@@ -28,12 +31,11 @@ export function createLabel(el: HTMLElement): void {
   const parentZIndex = getComputedZIndex(el);
   label.style.zIndex = String(parentZIndex + 1);
 
-  // Insert label as sibling to inherit stacking context
-  insertLabelForElement(label, el);
+  // Insert label as first child of the element
+  insertLabelInElement(label, el);
 
   // Set up hover listeners ONLY for hover mode
   if (state.displayMode === "hover") {
-    // Store the event handlers so we can remove them later if mode changes
     const showHandler = (): void => {
       label.style.visibility = "visible";
     };
@@ -41,44 +43,17 @@ export function createLabel(el: HTMLElement): void {
       label.style.visibility = "hidden";
     };
 
-    // For disabled buttons/elements with pointer-events: none, wrap them
-    const isDisabled =
-      (el as HTMLButtonElement | HTMLInputElement).disabled ||
-      el.hasAttribute("disabled") ||
-      window.getComputedStyle(el).pointerEvents === "none";
-
-    let hoverTarget: HTMLElement = el;
-
-    if (isDisabled) {
-      // Create a wrapper that will receive hover events
-      const wrapper = document.createElement("div");
-      wrapper.className = "testid-hover-wrapper";
-      wrapper.style.display = "inline-block";
-      wrapper.style.position = "relative";
-
-      // Insert wrapper before element
-      if (el.parentNode) {
-        el.parentNode.insertBefore(wrapper, el);
-        wrapper.appendChild(el);
-
-        // Store wrapper reference for cleanup
-        extEl.__hoverWrapper = wrapper;
-        hoverTarget = wrapper;
-      }
-    }
-
-    // Add event listeners to the appropriate target
+    // Add event listeners to the element
     extEl.__hoverHandlers = { show: showHandler, hide: hideHandler };
-    hoverTarget.addEventListener("mouseenter", showHandler);
-    hoverTarget.addEventListener("mouseleave", hideHandler);
+    el.addEventListener("mouseenter", showHandler);
+    el.addEventListener("mouseleave", hideHandler);
   }
 
   // Apply border if enabled
   updateElementBorder(el);
 
-  // Use requestAnimationFrame to ensure dimensions are calculated
+  // Update visibility on next frame
   requestAnimationFrame(() => {
-    positionLabel(el);
     updateLabelVisibility(el);
   });
 }
@@ -88,24 +63,17 @@ export function removeLabel(el: HTMLElement): void {
   if (!extEl.__testIdLabel) return;
 
   if (extEl.__hoverHandlers) {
-    const hoverTarget = extEl.__hoverWrapper || el;
-    hoverTarget.removeEventListener("mouseenter", extEl.__hoverHandlers.show);
-    hoverTarget.removeEventListener("mouseleave", extEl.__hoverHandlers.hide);
+    el.removeEventListener("mouseenter", extEl.__hoverHandlers.show);
+    el.removeEventListener("mouseleave", extEl.__hoverHandlers.hide);
     delete extEl.__hoverHandlers;
   }
 
-  if (extEl.__hoverWrapper) {
-    const wrapper = extEl.__hoverWrapper;
-    const parent = wrapper.parentNode;
-    if (parent) {
-      parent.insertBefore(el, wrapper);
-      wrapper.remove();
-    }
-    delete extEl.__hoverWrapper;
-  }
-
+  // Remove the label
   extEl.__testIdLabel.remove();
   delete extEl.__testIdLabel;
+
+  // Restore original position style
+  cleanupElementPosition(el);
 
   el.classList.remove("testid-border-highlight");
 
@@ -182,79 +150,4 @@ export function updateAllLabels(): void {
       (extEl.__testIdLabel as any).__mode = state.displayMode;
     }
   });
-}
-
-export function positionLabel(el: HTMLElement, retryCount = 0): void {
-  const extEl = el as ExtendedHTMLElement;
-  if (!extEl.__testIdLabel) return;
-
-  const rect = el.getBoundingClientRect();
-  const label = extEl.__testIdLabel;
-
-  // Get label dimensions - if they're 0, try again later
-  const labelWidth = label.offsetWidth;
-  const labelHeight = label.offsetHeight;
-
-  if (labelWidth === 0 || labelHeight === 0) {
-    // Dimensions not ready yet, schedule for next frame
-    requestAnimationFrame(() => positionLabel(el, retryCount));
-    return;
-  }
-
-  // Check if element position has stabilized (for animations)
-  const currentPos = { left: rect.left, top: rect.top };
-
-  if (!extEl.__lastPosition) {
-    // First position check - save and wait
-    extEl.__lastPosition = currentPos;
-    setTimeout(() => positionLabel(el, retryCount + 1), 50);
-    return;
-  }
-
-  // Compare with previous position
-  const posChanged =
-    Math.abs(currentPos.left - extEl.__lastPosition.left) > 1 ||
-    Math.abs(currentPos.top - extEl.__lastPosition.top) > 1;
-
-  if (posChanged && retryCount < 20) {
-    // Position still changing (animation in progress), wait and retry
-    extEl.__lastPosition = currentPos;
-    setTimeout(() => positionLabel(el, retryCount + 1), 50);
-    return;
-  }
-
-  // Position has stabilized, set final position
-  delete extEl.__lastPosition;
-
-  // Use the exact position from the element's bounding rect (same as border)
-  let left = rect.left;
-  const top = rect.top - labelHeight;
-
-  // Prevent label from going off-screen horizontally
-  const viewportWidth = window.innerWidth;
-
-  // If label would go off right edge, adjust it
-  if (left + labelWidth > viewportWidth) {
-    left = viewportWidth - labelWidth;
-  }
-
-  // If label would go off left edge, adjust it
-  if (left < 0) {
-    left = 0;
-  }
-
-  label.style.left = left + "px";
-  label.style.top = top + "px";
-}
-
-export function scheduleReposition(): void {
-  if (!repositionScheduled) {
-    setRepositionScheduled(true);
-    requestAnimationFrame(() => {
-      document
-        .querySelectorAll<HTMLElement>(`[${state.customAttribute}]`)
-        .forEach(positionLabel);
-      setRepositionScheduled(false);
-    });
-  }
 }

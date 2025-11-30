@@ -2,9 +2,6 @@
 
 import type { DisplayMode, ExtendedHTMLElement } from "./types";
 
-// Constants
-export const TABLE_WRAPPER_CLASS = "testid-table-wrapper";
-
 // Mutable state object
 export const state = {
   displayMode: "hover" as DisplayMode,
@@ -17,10 +14,3 @@ export const state = {
 
 // Set to track labeled elements
 export const labeledElements = new Set<ExtendedHTMLElement>();
-
-// Reposition scheduling flag
-export let repositionScheduled = false;
-
-export function setRepositionScheduled(value: boolean): void {
-  repositionScheduled = value;
-}
