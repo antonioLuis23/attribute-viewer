@@ -1,5 +1,26 @@
 // DOM utility functions for the attribute viewer extension
 
+// Elements that have restricted content models and can't contain arbitrary children
+const RESTRICTED_ELEMENTS = new Set([
+  "TR",
+  "TABLE",
+  "THEAD",
+  "TBODY",
+  "TFOOT",
+  "COLGROUP",
+  "COL",
+  "UL",
+  "OL",
+  "DL",
+  "SELECT",
+  "OPTGROUP",
+  "DATALIST",
+  "MAP",
+  "PICTURE",
+  "SOURCE",
+  "TRACK",
+]);
+
 export function getComputedZIndex(el: HTMLElement): number {
   let current: HTMLElement | null = el;
   let maxZIndex = 0;
@@ -19,6 +40,14 @@ export function getComputedZIndex(el: HTMLElement): number {
   }
 
   return maxZIndex;
+}
+
+/**
+ * Checks if an element has a restricted content model that doesn't allow
+ * arbitrary children like divs.
+ */
+export function hasRestrictedContent(el: HTMLElement): boolean {
+  return RESTRICTED_ELEMENTS.has(el.tagName);
 }
 
 /**
@@ -44,6 +73,41 @@ export function insertLabelInElement(
   el: HTMLElement
 ): void {
   el.insertBefore(label, el.firstChild);
+}
+
+/**
+ * Inserts a label for restricted elements using fixed positioning.
+ * The label is appended to document.body and positioned above the element.
+ */
+export function insertLabelForRestrictedElement(
+  label: HTMLDivElement,
+  el: HTMLElement
+): void {
+  // Add special class for fixed positioning
+  label.classList.add("testid-overlay-label--fixed");
+
+  // Position the label above the element
+  positionFixedLabel(label, el);
+
+  // Append to body
+  document.body.appendChild(label);
+}
+
+/**
+ * Positions a fixed label above its target element.
+ */
+export function positionFixedLabel(
+  label: HTMLDivElement,
+  el: HTMLElement
+): void {
+  const rect = el.getBoundingClientRect();
+  label.style.left = `${rect.left + window.scrollX}px`;
+  label.style.top = `${rect.top + window.scrollY - label.offsetHeight}px`;
+
+  // If label height is 0 (not yet rendered), use a reasonable default
+  if (label.offsetHeight === 0) {
+    label.style.top = `${rect.top + window.scrollY - 20}px`;
+  }
 }
 
 /**

@@ -7,7 +7,37 @@ import {
   setupElementForLabel,
   insertLabelInElement,
   cleanupElementPosition,
+  hasRestrictedContent,
+  insertLabelForRestrictedElement,
+  positionFixedLabel,
 } from "./dom-utils";
+
+// Track elements with fixed labels for resize repositioning
+const fixedLabelElements = new Set<ExtendedHTMLElement>();
+
+// Resize handler for repositioning fixed labels
+let resizeHandler: (() => void) | null = null;
+
+function setupResizeListener(): void {
+  if (resizeHandler) return;
+
+  resizeHandler = () => {
+    fixedLabelElements.forEach((el) => {
+      if (el.__testIdLabel) {
+        positionFixedLabel(el.__testIdLabel, el);
+      }
+    });
+  };
+
+  window.addEventListener("resize", resizeHandler);
+}
+
+function cleanupResizeListener(): void {
+  if (resizeHandler && fixedLabelElements.size === 0) {
+    window.removeEventListener("resize", resizeHandler);
+    resizeHandler = null;
+  }
+}
 
 export function createLabel(el: HTMLElement): void {
   const extEl = el as ExtendedHTMLElement;
@@ -16,9 +46,6 @@ export function createLabel(el: HTMLElement): void {
 
   // Avoid duplicates
   if (extEl.__testIdLabel) return;
-
-  // Set up element for label positioning (adds position:relative if needed)
-  setupElementForLabel(el);
 
   const label = document.createElement("div");
   label.className = "testid-overlay-label";
@@ -31,8 +58,24 @@ export function createLabel(el: HTMLElement): void {
   const parentZIndex = getComputedZIndex(el);
   label.style.zIndex = String(parentZIndex + 1);
 
-  // Insert label as first child of the element
-  insertLabelInElement(label, el);
+  // Check if element has restricted content model
+  const isRestricted = hasRestrictedContent(el);
+
+  if (isRestricted) {
+    // For restricted elements (tr, table, ul, etc.), use fixed positioning
+    insertLabelForRestrictedElement(label, el);
+    fixedLabelElements.add(extEl);
+    setupResizeListener();
+
+    // Reposition after label is rendered to get correct height
+    requestAnimationFrame(() => {
+      positionFixedLabel(label, el);
+    });
+  } else {
+    // For normal elements, insert as child with relative positioning
+    setupElementForLabel(el);
+    insertLabelInElement(label, el);
+  }
 
   // Set up hover listeners ONLY for hover mode
   if (state.displayMode === "hover") {
@@ -72,8 +115,14 @@ export function removeLabel(el: HTMLElement): void {
   extEl.__testIdLabel.remove();
   delete extEl.__testIdLabel;
 
-  // Restore original position style
-  cleanupElementPosition(el);
+  // Clean up based on whether it was a fixed label
+  if (fixedLabelElements.has(extEl)) {
+    fixedLabelElements.delete(extEl);
+    cleanupResizeListener();
+  } else {
+    // Restore original position style for non-restricted elements
+    cleanupElementPosition(el);
+  }
 
   el.classList.remove("testid-border-highlight");
 
@@ -119,6 +168,8 @@ export function cleanupAllLabels(): void {
     removeLabel(el);
   });
   labeledElements.clear();
+  fixedLabelElements.clear();
+  cleanupResizeListener();
 }
 
 export function updateAllLabels(): void {
