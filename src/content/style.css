@@ -21,10 +21,11 @@
   box-shadow: 0 2px 8px rgba(85, 2, 153, 0.3);
 }
 
-/* Fixed positioning variant for restricted elements (tr, table, ul, etc.) */
+/* Fixed positioning variant for restricted/void elements (tr, table, input, etc.) */
 .testid-overlay-label--fixed {
-  position: absolute;
+  position: fixed;
   bottom: auto;
+  z-index: 2147483646 !important;
   /* top/left are set dynamically via JS */
 }
 

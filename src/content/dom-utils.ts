@@ -21,6 +21,9 @@ const RESTRICTED_ELEMENTS = new Set([
   "TRACK",
 ]);
 
+// Void elements that need a hover wrapper for label positioning
+const VOID_ELEMENTS = new Set(["INPUT", "TEXTAREA"]);
+
 export function getComputedZIndex(el: HTMLElement): number {
   let current: HTMLElement | null = el;
   let maxZIndex = 0;
@@ -95,19 +98,17 @@ export function insertLabelForRestrictedElement(
 
 /**
  * Positions a fixed label above its target element.
+ * Uses viewport-relative coordinates since label has position: fixed.
  */
 export function positionFixedLabel(
   label: HTMLDivElement,
   el: HTMLElement
 ): void {
   const rect = el.getBoundingClientRect();
-  label.style.left = `${rect.left + window.scrollX}px`;
-  label.style.top = `${rect.top + window.scrollY - label.offsetHeight}px`;
+  const labelHeight = label.offsetHeight || 20; // Default if not yet rendered
 
-  // If label height is 0 (not yet rendered), use a reasonable default
-  if (label.offsetHeight === 0) {
-    label.style.top = `${rect.top + window.scrollY - 20}px`;
-  }
+  label.style.left = `${rect.left}px`;
+  label.style.top = `${rect.top - labelHeight}px`;
 }
 
 /**
@@ -118,4 +119,23 @@ export function cleanupElementPosition(el: HTMLElement): void {
     el.style.position = el.dataset.labelOriginalPosition;
     delete el.dataset.labelOriginalPosition;
   }
+}
+
+/**
+ * Checks if an element is a void element that needs special label handling.
+ */
+export function isVoidElement(el: HTMLElement): boolean {
+  return VOID_ELEMENTS.has(el.tagName);
+}
+
+/**
+ * Inserts a label for void elements (input, textarea).
+ * Same approach as restricted elements - append to body with fixed positioning.
+ */
+export function insertLabelForVoidElement(
+  label: HTMLDivElement,
+  el: HTMLElement
+): void {
+  // Use the same approach as restricted elements
+  insertLabelForRestrictedElement(label, el);
 }

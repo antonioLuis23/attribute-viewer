@@ -10,18 +10,20 @@ import {
   hasRestrictedContent,
   insertLabelForRestrictedElement,
   positionFixedLabel,
+  isVoidElement,
+  insertLabelForVoidElement,
 } from "./dom-utils";
 
 // Track elements with fixed labels for resize repositioning
 const fixedLabelElements = new Set<ExtendedHTMLElement>();
 
-// Resize handler for repositioning fixed labels
-let resizeHandler: (() => void) | null = null;
+// Handler for repositioning fixed labels on resize/scroll
+let repositionHandler: (() => void) | null = null;
 
-function setupResizeListener(): void {
-  if (resizeHandler) return;
+function setupRepositionListeners(): void {
+  if (repositionHandler) return;
 
-  resizeHandler = () => {
+  repositionHandler = () => {
     fixedLabelElements.forEach((el) => {
       if (el.__testIdLabel) {
         positionFixedLabel(el.__testIdLabel, el);
@@ -29,13 +31,15 @@ function setupResizeListener(): void {
     });
   };
 
-  window.addEventListener("resize", resizeHandler);
+  window.addEventListener("resize", repositionHandler);
+  window.addEventListener("scroll", repositionHandler, true); // Use capture for nested scrolls
 }
 
-function cleanupResizeListener(): void {
-  if (resizeHandler && fixedLabelElements.size === 0) {
-    window.removeEventListener("resize", resizeHandler);
-    resizeHandler = null;
+function cleanupRepositionListeners(): void {
+  if (repositionHandler && fixedLabelElements.size === 0) {
+    window.removeEventListener("resize", repositionHandler);
+    window.removeEventListener("scroll", repositionHandler, true);
+    repositionHandler = null;
   }
 }
 
@@ -58,14 +62,25 @@ export function createLabel(el: HTMLElement): void {
   const parentZIndex = getComputedZIndex(el);
   label.style.zIndex = String(parentZIndex + 1);
 
-  // Check if element has restricted content model
+  // Check if element needs special handling
   const isRestricted = hasRestrictedContent(el);
+  const isVoid = isVoidElement(el);
 
   if (isRestricted) {
     // For restricted elements (tr, table, ul, etc.), use fixed positioning
     insertLabelForRestrictedElement(label, el);
     fixedLabelElements.add(extEl);
-    setupResizeListener();
+    setupRepositionListeners();
+
+    // Reposition after label is rendered to get correct height
+    requestAnimationFrame(() => {
+      positionFixedLabel(label, el);
+    });
+  } else if (isVoid) {
+    // For void elements (input, textarea), use fixed positioning
+    insertLabelForVoidElement(label, el);
+    fixedLabelElements.add(extEl);
+    setupRepositionListeners();
 
     // Reposition after label is rendered to get correct height
     requestAnimationFrame(() => {
@@ -105,6 +120,7 @@ export function removeLabel(el: HTMLElement): void {
   const extEl = el as ExtendedHTMLElement;
   if (!extEl.__testIdLabel) return;
 
+  // Remove hover handlers
   if (extEl.__hoverHandlers) {
     el.removeEventListener("mouseenter", extEl.__hoverHandlers.show);
     el.removeEventListener("mouseleave", extEl.__hoverHandlers.hide);
@@ -115,10 +131,10 @@ export function removeLabel(el: HTMLElement): void {
   extEl.__testIdLabel.remove();
   delete extEl.__testIdLabel;
 
-  // Clean up based on whether it was a fixed label
+  // Clean up based on the type of label positioning used
   if (fixedLabelElements.has(extEl)) {
     fixedLabelElements.delete(extEl);
-    cleanupResizeListener();
+    cleanupRepositionListeners();
   } else {
     // Restore original position style for non-restricted elements
     cleanupElementPosition(el);
@@ -169,10 +185,20 @@ export function cleanupAllLabels(): void {
   });
   labeledElements.clear();
   fixedLabelElements.clear();
-  cleanupResizeListener();
+  cleanupRepositionListeners();
 }
 
 export function updateAllLabels(): void {
+  // If display mode is "off", remove all labels from DOM
+  if (state.displayMode === "off") {
+    labeledElements.forEach((el) => {
+      removeLabel(el);
+    });
+    // Still apply borders if enabled
+    updateAllBorders();
+    return;
+  }
+
   labeledElements.forEach((el) => {
     const extEl = el as ExtendedHTMLElement;
     const label = extEl.__testIdLabel;
