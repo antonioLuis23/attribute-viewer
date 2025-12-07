@@ -22,7 +22,7 @@ const RESTRICTED_ELEMENTS = new Set([
 ]);
 
 // Void elements that need a hover wrapper for label positioning
-const VOID_ELEMENTS = new Set(["INPUT", "TEXTAREA"]);
+const VOID_ELEMENTS = new Set(["INPUT", "TEXTAREA", "IMG", "VIDEO"]);
 
 export function getComputedZIndex(el: HTMLElement): number {
   let current: HTMLElement | null = el;
