@@ -1,10 +1,22 @@
 @import url("https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap");
 
-/* Label positioned above the element using absolute positioning */
+/* Label using Popover API + CSS Anchor Positioning */
+/* Popover places it in the top layer (always on top of everything) */
+/* Anchor positioning handles placement relative to target element */
 .testid-overlay-label {
-  position: absolute;
-  bottom: calc(100% - 20px);
-  left: 0;
+  /* Reset popover defaults */
+  margin: 0;
+  border: none;
+  padding: 0;
+  inset: auto;
+
+  /* Anchor positioning - positions relative to the anchored element */
+  position: fixed;
+  position-anchor: var(--label-anchor);
+  bottom: anchor(top);
+  left: anchor(left);
+
+  /* Visual styles */
   background: #550299;
   width: fit-content !important;
   color: white;
@@ -12,21 +24,21 @@
   padding: 8px 8px;
   border-radius: 3px;
   pointer-events: none;
-  /* z-index is set dynamically based on parent element */
   white-space: nowrap;
   font-family: "Montserrat", -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif !important;
   line-height: 1 !important;
   font-weight: 500;
   box-shadow: 0 2px 8px rgba(85, 2, 153, 0.3);
+
+  /* Smooth appearance */
+  opacity: 1;
+  transition: opacity 0.15s ease-out;
 }
 
-/* Fixed positioning variant for restricted/void elements (tr, table, input, etc.) */
-.testid-overlay-label--fixed {
-  position: fixed;
-  bottom: auto;
-  z-index: 2147483646 !important;
-  /* top/left are set dynamically via JS */
+/* Hidden state for popover (used with popover="manual") */
+.testid-overlay-label:not(:popover-open) {
+  display: none;
 }
 
 /* Border for elements with testids */
