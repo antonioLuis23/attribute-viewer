@@ -1,15 +1,8 @@
 // Label management functions for the attribute viewer extension
-// Uses CSS Anchor Positioning + Popover API for labels that are always on top
+// Uses Popover API for z-index + JS Positioning for reliability
 
 import type { ExtendedHTMLElement } from "./types";
 import { state, labeledElements } from "./state";
-
-// Counter for generating unique anchor names
-let anchorCounter = 0;
-
-function generateAnchorName(): string {
-  return `--testid-anchor-${++anchorCounter}`;
-}
 
 export function createLabel(el: HTMLElement): void {
   const extEl = el as ExtendedHTMLElement;
@@ -19,21 +12,11 @@ export function createLabel(el: HTMLElement): void {
   // Avoid duplicates
   if (extEl.__testIdLabel) return;
 
-  // Generate unique anchor name for this element
-  const anchorName = generateAnchorName();
-
-  // Set anchor-name on the target element
-  el.style.anchorName = anchorName;
-  extEl.__anchorName = anchorName;
-
   // Create label as a popover
   const label = document.createElement("div");
   label.className = "testid-overlay-label";
   label.innerText = attributeValue;
   label.setAttribute("popover", "manual");
-
-  // Set the anchor reference via CSS custom property
-  label.style.setProperty("--label-anchor", anchorName);
 
   extEl.__testIdLabel = label;
   labeledElements.add(extEl);
@@ -44,6 +27,7 @@ export function createLabel(el: HTMLElement): void {
   // Set up hover listeners ONLY for hover mode
   if (state.displayMode === "hover") {
     const showHandler = (): void => {
+      updateLabelPosition(el, label);
       label.showPopover();
     };
     const hideHandler = (): void => {
@@ -54,6 +38,9 @@ export function createLabel(el: HTMLElement): void {
     extEl.__hoverHandlers = { show: showHandler, hide: hideHandler };
     el.addEventListener("mouseenter", showHandler);
     el.addEventListener("mouseleave", hideHandler);
+  } else if (state.displayMode === "always") {
+    // For always mode, we need to update position initially
+    updateLabelPosition(el, label);
   }
 
   // Apply border if enabled
@@ -63,6 +50,16 @@ export function createLabel(el: HTMLElement): void {
   requestAnimationFrame(() => {
     updateLabelVisibility(el);
   });
+}
+
+// Manually calculate position to be robust against complex layouts/transforms
+function updateLabelPosition(target: HTMLElement, label: HTMLElement) {
+  const rect = target.getBoundingClientRect();
+
+  // Position above the element
+  // The CSS has transform: translateY(-100%) to move it up by its own height
+  label.style.top = `${rect.top}px`;
+  label.style.left = `${rect.left}px`;
 }
 
 export function removeLabel(el: HTMLElement): void {
@@ -87,9 +84,9 @@ export function removeLabel(el: HTMLElement): void {
   extEl.__testIdLabel.remove();
   delete extEl.__testIdLabel;
 
-  // Clean up anchor name from element
+  // Clean up anchor name from element (legacy cleanup)
   if (extEl.__anchorName) {
-    el.style.anchorName = "";
+    el.style.removeProperty("anchor-name");
     delete extEl.__anchorName;
   }
 
@@ -121,6 +118,8 @@ export function updateLabelVisibility(el: HTMLElement): void {
   } else {
     // "always" mode - show the popover
     try {
+      // Update position before showing
+      updateLabelPosition(el, label);
       label.showPopover();
     } catch {
       // Ignore if already shown
@@ -189,4 +188,30 @@ export function updateAllLabels(): void {
       (extEl.__testIdLabel as any).__mode = state.displayMode;
     }
   });
+
+  // Update positions for always visible labels
+  if (state.displayMode === "always") {
+    labeledElements.forEach((el) => {
+      const extEl = el as ExtendedHTMLElement;
+      if (extEl.__testIdLabel) {
+        updateLabelPosition(el, extEl.__testIdLabel);
+      }
+    });
+  }
 }
+
+// Add scroll listener to update positions in "always" mode
+window.addEventListener(
+  "scroll",
+  () => {
+    if (state.displayMode === "always") {
+      labeledElements.forEach((el) => {
+        const extEl = el as ExtendedHTMLElement;
+        if (extEl.__testIdLabel && document.contains(el)) {
+          updateLabelPosition(el, extEl.__testIdLabel);
+        }
+      });
+    }
+  },
+  { passive: true, capture: true }
+); // Capture to detect scroll in sub-containers

@@ -1,8 +1,7 @@
 @import url("https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap");
 
-/* Label using Popover API + CSS Anchor Positioning */
+/* Label using Popover API + Manual Positioning */
 /* Popover places it in the top layer (always on top of everything) */
-/* Anchor positioning handles placement relative to target element */
 .testid-overlay-label {
   /* Reset popover defaults */
   margin: 0;
@@ -10,15 +9,20 @@
   padding: 0;
   inset: auto;
 
-  /* Anchor positioning - positions relative to the anchored element */
+  /* Fixed positioning relative to viewport */
   position: fixed;
-  position-anchor: var(--label-anchor);
-  bottom: anchor(top);
-  left: anchor(left);
+
+  /* Initial position (updated by JS) */
+  top: 0;
+  left: 0;
+
+  /* Position above the target element */
+  transform: translateY(-100%);
+  margin-top: -4px; /* Slight gap */
 
   /* Visual styles */
   background: #550299;
-  width: fit-content !important;
+  width: max-content !important;
   color: white;
   font-size: 10px;
   padding: 8px 8px;
