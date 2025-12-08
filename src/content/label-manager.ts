@@ -8,15 +8,85 @@ import { state, labeledElements } from "./state";
 let globalHoverListener: ((e: MouseEvent) => void) | null = null;
 let currentHoveredLabelElement: ExtendedHTMLElement | null = null;
 
-function handleGlobalHover(event: MouseEvent) {
+// Throttle utility
+function throttle(func: Function, limit: number) {
+  let inThrottle: boolean;
+  return function (this: any, ...args: any[]) {
+    if (!inThrottle) {
+      func.apply(this, args);
+      inThrottle = true;
+      setTimeout(() => (inThrottle = false), limit);
+    }
+  };
+}
+
+function handleGlobalMouseMove(event: MouseEvent) {
   if (state.displayMode !== "hover") return;
 
+  const x = event.clientX;
+  const y = event.clientY;
+
+  // 1. Find standard candidate via event target
   const target = event.target as HTMLElement;
-  const closest = target.closest(
+  const standardCandidate = target.closest(
     `[${state.customAttribute}]`
   ) as ExtendedHTMLElement | null;
 
-  if (closest === currentHoveredLabelElement) return;
+  // 2. Find manual candidate (disabled elements that might not fire events)
+  let manualCandidate: ExtendedHTMLElement | null = null;
+  let minArea = Infinity;
+
+  // We only check elements that are likely to be problematic (disabled)
+  // to avoid performance impact and overriding correct browser hit-testing for normal elements.
+  for (const el of labeledElements) {
+    if (
+      el.matches(":disabled") ||
+      el.getAttribute("aria-disabled") === "true"
+    ) {
+      const rect = el.getBoundingClientRect();
+      if (
+        x >= rect.left &&
+        x <= rect.right &&
+        y >= rect.top &&
+        y <= rect.bottom
+      ) {
+        // Check visibility/displayed?
+        // getBoundingClientRect() returns 0s for display:none, but visibility:hidden has dims.
+        // We assume labeledElements are visible-ish.
+
+        const area = rect.width * rect.height;
+        if (area < minArea) {
+          minArea = area;
+          manualCandidate = el;
+        }
+      }
+    }
+  }
+
+  // 3. Determine best candidate
+  // If we found a disabled element under cursor, it usually takes precedence
+  // if it's "inside" or "on top" of the standard candidate.
+  // Using area as a proxy for "more specific descendent".
+
+  let finalCandidate = standardCandidate;
+
+  if (manualCandidate) {
+    if (!standardCandidate) {
+      finalCandidate = manualCandidate;
+    } else {
+      // If we have both, prefer the smaller one (likely the child)
+      const standardRect = standardCandidate.getBoundingClientRect();
+      const standardArea = standardRect.width * standardRect.height;
+
+      // If manual candidate is smaller (or similar size), use it.
+      // This handles the case of "Disabled Button inside Div".
+      if (minArea <= standardArea) {
+        finalCandidate = manualCandidate;
+      }
+    }
+  }
+
+  if (finalCandidate === currentHoveredLabelElement) return;
 
   // Hide previous label
   if (currentHoveredLabelElement && currentHoveredLabelElement.__testIdLabel) {
@@ -28,7 +98,7 @@ function handleGlobalHover(event: MouseEvent) {
   }
 
   // Update current
-  currentHoveredLabelElement = closest;
+  currentHoveredLabelElement = finalCandidate;
 
   // Show new label if it exists and is tracked
   if (
@@ -47,17 +117,22 @@ function handleGlobalHover(event: MouseEvent) {
   }
 }
 
+// Throttled version
+const throttledGlobalMouseMove = throttle(handleGlobalMouseMove, 50);
+
 function manageGlobalHoverListener() {
   if (state.displayMode === "hover") {
     if (!globalHoverListener) {
-      globalHoverListener = handleGlobalHover;
-      document.addEventListener("mouseover", globalHoverListener, {
+      // We use mousemove now to handle elements that don't fire mouse events
+      // and to allow continuous checking as mouse moves over disabled elements.
+      globalHoverListener = throttledGlobalMouseMove as (e: MouseEvent) => void;
+      document.addEventListener("mousemove", globalHoverListener, {
         passive: true,
       });
     }
   } else {
     if (globalHoverListener) {
-      document.removeEventListener("mouseover", globalHoverListener);
+      document.removeEventListener("mousemove", globalHoverListener);
       globalHoverListener = null;
       // Also reset current hovered element and hide its label if visible
       if (
@@ -160,15 +235,7 @@ export function updateLabelVisibility(el: HTMLElement): void {
     }
   } else if (state.displayMode === "hover") {
     // Hidden by default in hover mode, handled by global listener
-    // But if we are currently hovering this element (e.g. after mode switch), we might want to show it?
-    // Let's keep it hidden by default and let the mouseover event handle it.
-    // However, if the mouse is ALREADY over it, we might miss it until mouse moves.
-    // That's acceptable for now.
     try {
-      // Only hide if it's not the current hovered element (managed by global listener)
-      // But since we just switched modes or updated, safe to hide all initially
-      // or let global listener handle it.
-      // Actually, if we just switched to hover mode, global listener is fresh.
       label.hidePopover();
     } catch {
       // Ignore if already hidden
@@ -208,7 +275,7 @@ export function cleanupAllLabels(): void {
 
   // Also cleanup global listener
   if (globalHoverListener) {
-    document.removeEventListener("mouseover", globalHoverListener);
+    document.removeEventListener("mousemove", globalHoverListener);
     globalHoverListener = null;
     currentHoveredLabelElement = null;
   }
@@ -235,16 +302,10 @@ export function updateAllLabels(): void {
     const attributeMissing = !el.hasAttribute(state.customAttribute);
     const removedFromDom = !document.contains(el);
 
-    // Note: We don't necessarily need to remove/recreate labels for mode changes anymore
-    // since we don't attach individual listeners. But keeping it for consistency is fine.
-    // Actually, avoiding recreation is better performance.
-
     if (attributeMissing || removedFromDom) {
       removeLabel(el);
     } else if (modeMismatch) {
-      // If mode changed, we just need to update visibility, not recreate
-      // But the original code was recreating. Let's try to preserve the label.
-      // If we preserve, we just need to update visibility.
+      // Mode mismatch logic
     }
   });
 
