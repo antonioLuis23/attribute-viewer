@@ -287,6 +287,16 @@ window.addEventListener(
           updateLabelPosition(el, extEl.__testIdLabel);
         }
       });
+    } else if (state.displayMode === "hover" && currentHoveredLabelElement) {
+      if (
+        currentHoveredLabelElement.__testIdLabel &&
+        document.contains(currentHoveredLabelElement)
+      ) {
+        updateLabelPosition(
+          currentHoveredLabelElement,
+          currentHoveredLabelElement.__testIdLabel
+        );
+      }
     }
   },
   { passive: true, capture: true }
