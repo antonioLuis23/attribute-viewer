@@ -11,10 +11,6 @@ export type DisplayMode = "always" | "hover" | "off";
 export interface ExtendedHTMLElement extends HTMLElement {
   __testIdLabel?: HTMLDivElement;
   __anchorName?: string;
-  __hoverHandlers?: {
-    show: () => void;
-    hide: () => void;
-  };
 }
 
 export interface LocatorData {

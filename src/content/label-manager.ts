@@ -4,6 +4,77 @@
 import type { ExtendedHTMLElement } from "./types";
 import { state, labeledElements } from "./state";
 
+// Global hover state
+let globalHoverListener: ((e: MouseEvent) => void) | null = null;
+let currentHoveredLabelElement: ExtendedHTMLElement | null = null;
+
+function handleGlobalHover(event: MouseEvent) {
+  if (state.displayMode !== "hover") return;
+
+  const target = event.target as HTMLElement;
+  const closest = target.closest(
+    `[${state.customAttribute}]`
+  ) as ExtendedHTMLElement | null;
+
+  if (closest === currentHoveredLabelElement) return;
+
+  // Hide previous label
+  if (currentHoveredLabelElement && currentHoveredLabelElement.__testIdLabel) {
+    try {
+      currentHoveredLabelElement.__testIdLabel.hidePopover();
+    } catch {
+      // Ignore
+    }
+  }
+
+  // Update current
+  currentHoveredLabelElement = closest;
+
+  // Show new label if it exists and is tracked
+  if (
+    currentHoveredLabelElement &&
+    labeledElements.has(currentHoveredLabelElement)
+  ) {
+    const label = currentHoveredLabelElement.__testIdLabel;
+    if (label) {
+      updateLabelPosition(currentHoveredLabelElement, label);
+      try {
+        label.showPopover();
+      } catch {
+        // Ignore
+      }
+    }
+  }
+}
+
+function manageGlobalHoverListener() {
+  if (state.displayMode === "hover") {
+    if (!globalHoverListener) {
+      globalHoverListener = handleGlobalHover;
+      document.addEventListener("mouseover", globalHoverListener, {
+        passive: true,
+      });
+    }
+  } else {
+    if (globalHoverListener) {
+      document.removeEventListener("mouseover", globalHoverListener);
+      globalHoverListener = null;
+      // Also reset current hovered element and hide its label if visible
+      if (
+        currentHoveredLabelElement &&
+        currentHoveredLabelElement.__testIdLabel
+      ) {
+        try {
+          currentHoveredLabelElement.__testIdLabel.hidePopover();
+        } catch {
+          // Ignore
+        }
+      }
+      currentHoveredLabelElement = null;
+    }
+  }
+}
+
 export function createLabel(el: HTMLElement): void {
   const extEl = el as ExtendedHTMLElement;
   const attributeValue = el.getAttribute(state.customAttribute);
@@ -24,21 +95,7 @@ export function createLabel(el: HTMLElement): void {
   // Append to body (popover API handles top layer placement)
   document.body.appendChild(label);
 
-  // Set up hover listeners ONLY for hover mode
-  if (state.displayMode === "hover") {
-    const showHandler = (): void => {
-      updateLabelPosition(el, label);
-      label.showPopover();
-    };
-    const hideHandler = (): void => {
-      label.hidePopover();
-    };
-
-    // Add event listeners to the element
-    extEl.__hoverHandlers = { show: showHandler, hide: hideHandler };
-    el.addEventListener("mouseenter", showHandler);
-    el.addEventListener("mouseleave", hideHandler);
-  } else if (state.displayMode === "always") {
+  if (state.displayMode === "always") {
     // For always mode, we need to update position initially
     updateLabelPosition(el, label);
   }
@@ -65,13 +122,6 @@ function updateLabelPosition(target: HTMLElement, label: HTMLElement) {
 export function removeLabel(el: HTMLElement): void {
   const extEl = el as ExtendedHTMLElement;
   if (!extEl.__testIdLabel) return;
-
-  // Remove hover handlers
-  if (extEl.__hoverHandlers) {
-    el.removeEventListener("mouseenter", extEl.__hoverHandlers.show);
-    el.removeEventListener("mouseleave", extEl.__hoverHandlers.hide);
-    delete extEl.__hoverHandlers;
-  }
 
   // Hide popover before removing (clean dismissal)
   try {
@@ -109,8 +159,16 @@ export function updateLabelVisibility(el: HTMLElement): void {
       // Ignore if already hidden
     }
   } else if (state.displayMode === "hover") {
-    // Hidden by default in hover mode, shown on mouseenter
+    // Hidden by default in hover mode, handled by global listener
+    // But if we are currently hovering this element (e.g. after mode switch), we might want to show it?
+    // Let's keep it hidden by default and let the mouseover event handle it.
+    // However, if the mouse is ALREADY over it, we might miss it until mouse moves.
+    // That's acceptable for now.
     try {
+      // Only hide if it's not the current hovered element (managed by global listener)
+      // But since we just switched modes or updated, safe to hide all initially
+      // or let global listener handle it.
+      // Actually, if we just switched to hover mode, global listener is fresh.
       label.hidePopover();
     } catch {
       // Ignore if already hidden
@@ -147,9 +205,19 @@ export function cleanupAllLabels(): void {
     removeLabel(el);
   });
   labeledElements.clear();
+
+  // Also cleanup global listener
+  if (globalHoverListener) {
+    document.removeEventListener("mouseover", globalHoverListener);
+    globalHoverListener = null;
+    currentHoveredLabelElement = null;
+  }
 }
 
 export function updateAllLabels(): void {
+  // Manage global hover listener based on mode
+  manageGlobalHoverListener();
+
   // If display mode is "off", remove all labels from DOM
   if (state.displayMode === "off") {
     labeledElements.forEach((el) => {
@@ -167,8 +235,16 @@ export function updateAllLabels(): void {
     const attributeMissing = !el.hasAttribute(state.customAttribute);
     const removedFromDom = !document.contains(el);
 
-    if (modeMismatch || attributeMissing || removedFromDom) {
+    // Note: We don't necessarily need to remove/recreate labels for mode changes anymore
+    // since we don't attach individual listeners. But keeping it for consistency is fine.
+    // Actually, avoiding recreation is better performance.
+
+    if (attributeMissing || removedFromDom) {
       removeLabel(el);
+    } else if (modeMismatch) {
+      // If mode changed, we just need to update visibility, not recreate
+      // But the original code was recreating. Let's try to preserve the label.
+      // If we preserve, we just need to update visibility.
     }
   });
 
