@@ -131,7 +131,7 @@ function handleSelectionClick(event: Event): void {
   downloadLocators(locators);
 }
 
-function collectLocators(parentElement: HTMLElement): LocatorData[] {
+export function collectLocators(parentElement: HTMLElement): LocatorData[] {
   // Include the parent element itself if it has the custom attribute
   const allElements: HTMLElement[] = [parentElement];
 
@@ -193,7 +193,7 @@ function collectLocators(parentElement: HTMLElement): LocatorData[] {
   return locators;
 }
 
-function downloadLocators(locators: LocatorData[]): void {
+export function downloadLocators(locators: LocatorData[]): void {
   const json = JSON.stringify(locators, null, 2);
   const blob = new Blob([json], { type: "application/json" });
   const url = URL.createObjectURL(blob);

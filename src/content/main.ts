@@ -4,7 +4,11 @@ import "./style.css";
 import { loadSettings, listenForSettingsChanges } from "./storage";
 import { updateAllLabels } from "./label-manager";
 import { startObserver } from "./observer";
-import { startSelectionMode } from "./selection-mode";
+import {
+  startSelectionMode,
+  collectLocators,
+  downloadLocators,
+} from "./selection-mode";
 
 // Initialize settings
 loadSettings();
@@ -20,5 +24,8 @@ window.addEventListener("load", updateAllLabels);
 chrome.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
   if (request.action === "startSelectionMode") {
     startSelectionMode();
+  } else if (request.action === "downloadAllLocators") {
+    const locators = collectLocators(document.body);
+    downloadLocators(locators);
   }
 });

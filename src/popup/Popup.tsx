@@ -54,7 +54,7 @@ export const Popup: React.FC = () => {
     }
   };
 
-  const handleDownloadLocators = async () => {
+  const handleDownloadFromSelection = async () => {
     try {
       const [tab] = await chrome.tabs.query({
         active: true,
@@ -67,6 +67,21 @@ export const Popup: React.FC = () => {
       }
     } catch (error) {
       console.error("Error starting selection mode:", error);
+    }
+  };
+
+  const handleDownloadAllLocators = async () => {
+    try {
+      const [tab] = await chrome.tabs.query({
+        active: true,
+        currentWindow: true,
+      });
+
+      if (tab.id) {
+        chrome.tabs.sendMessage(tab.id, { action: "downloadAllLocators" });
+      }
+    } catch (error) {
+      console.error("Error downloading all locators:", error);
     }
   };
 
@@ -87,7 +102,10 @@ export const Popup: React.FC = () => {
         showBorders={showBorders}
         onChange={handleShowBordersChange}
       />
-      <LocatorActions onDownload={handleDownloadLocators} />
+      <LocatorActions
+        onDownloadAll={handleDownloadAllLocators}
+        onDownloadFromSelection={handleDownloadFromSelection}
+      />
     </div>
   );
 };
