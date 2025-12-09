@@ -71,7 +71,7 @@ export const Popup: React.FC = () => {
   };
 
   return (
-    <div className="popup-container">
+    <div className="flex flex-col gap-[18px] p-3">
       <Header />
       <AttributeSettings
         attribute={customAttribute}

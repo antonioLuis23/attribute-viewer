@@ -1,4 +1,6 @@
 import React from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 interface Props {
   attribute: string;
@@ -20,20 +22,26 @@ export const AttributeSettings: React.FC<Props> = ({
   };
 
   return (
-    <div className="setting-group">
-      <label htmlFor="customAttribute">Attribute Name:</label>
-      <div className="attribute-input-row">
-        <input
+    <div className="p-3 bg-card border border-border rounded-lg flex flex-col gap-2.5">
+      <label
+        htmlFor="customAttribute"
+        className="text-[13px] font-semibold text-foreground"
+      >
+        Attribute Name:
+      </label>
+      <div className="flex items-center gap-2.5">
+        <Input
           type="text"
           id="customAttribute"
           placeholder="data-testid"
+          className="flex-1 w-full p-[10px_12px] text-[13px] font-medium text-foreground bg-background border border-input rounded-md transition-colors duration-200 hover:border-ring focus:outline-none focus:border-ring focus:ring-0"
           value={attribute}
           onChange={(e) => onAttributeChange(e.target.value)}
           onKeyDown={handleKeyDown}
         />
-        <button id="applyAttribute" className="apply-button" onClick={onApply}>
+        <Button id="applyAttribute" size="sm" onClick={onApply}>
           {buttonText}
-        </button>
+        </Button>
       </div>
     </div>
   );
