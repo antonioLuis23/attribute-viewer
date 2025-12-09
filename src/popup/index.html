@@ -10,50 +10,19 @@
       href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="style.css" />
+    <style>
+      body {
+        width: 320px;
+        min-height: 400px;
+        margin: 0;
+        padding: 0;
+        background: #0f0f13; /* Match the dark theme background */
+        color: #f6f5fb;
+      }
+    </style>
   </head>
   <body>
-    <div class="popup-container">
-      <h1 class="popup-title">
-        <span class="popup-title-icon" aria-hidden="true"></span>
-        Attribute Viewer
-      </h1>
-      <div class="setting-group">
-        <label for="customAttribute">Attribute Name:</label>
-        <div class="attribute-input-row">
-          <input
-            type="text"
-            id="customAttribute"
-            placeholder="data-testid"
-            value="data-testid"
-          />
-          <button id="applyAttribute" class="apply-button">Apply</button>
-        </div>
-      </div>
-
-      <div class="setting-group">
-        <label for="displayMode">Display Mode:</label>
-        <select id="displayMode">
-          <option value="always">Always Show</option>
-          <option value="hover" selected>On Hover</option>
-          <option value="off">Off</option>
-        </select>
-      </div>
-
-      <div class="setting-group">
-        <label class="checkbox-label">
-          <input type="checkbox" id="showBorders" checked />
-          <span>Highlight elements with the attribute</span>
-        </label>
-      </div>
-      <div class="setting-group">
-        <button id="downloadLocators" class="download-button">
-          Download Locators
-        </button>
-        <p class="hint">Click to select a parent element on the page</p>
-        <p class="hint">Press ESC to cancel selection mode</p>
-      </div>
-    </div>
-    <script type="module" src="main.ts"></script>
+    <div id="root"></div>
+    <script type="module" src="/src/popup/main.tsx"></script>
   </body>
 </html>
