@@ -11,11 +11,22 @@
       rel="stylesheet"
     />
     <style>
+      /* Prevent FOUC by setting colors before external CSS loads */
+      html {
+        color-scheme: light dark;
+        background: oklch(0.994 0 0);
+      }
+      @media (prefers-color-scheme: dark) {
+        html {
+          background: oklch(0.2223 0.006 271.1393);
+        }
+      }
       body {
         width: 320px;
-        min-height: 400px;
+        min-height: 500px;
         margin: 0;
         padding: 0;
+        background: inherit;
       }
     </style>
   </head>
