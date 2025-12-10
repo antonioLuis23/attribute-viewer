@@ -359,6 +359,94 @@ window.addEventListener(
         );
       }
     }
+    // Update duplicate labels positions
+    duplicateLabelsMap.forEach((label, el) => {
+      if (document.contains(el)) {
+        updateLabelPosition(el, label);
+      }
+    });
   },
   { passive: true, capture: true }
 ); // Capture to detect scroll in sub-containers
+
+// Track duplicate labels separately
+const duplicateLabelsMap = new Map<HTMLElement, HTMLDivElement>();
+
+export function showDuplicateLabels(attributeValue: string): void {
+  // First, clear any existing duplicate labels
+  hideDuplicateLabels();
+
+  // Find all elements with the matching attribute value
+  const elements = document.querySelectorAll<HTMLElement>(
+    `[${state.customAttribute}="${CSS.escape(attributeValue)}"]`
+  );
+
+  elements.forEach((el) => {
+    // Create warning label
+    const label = document.createElement("div");
+    label.className = "testid-overlay-label testid-overlay-label--warning";
+    label.innerText = attributeValue;
+    label.setAttribute("popover", "manual");
+
+    document.body.appendChild(label);
+    duplicateLabelsMap.set(el, label);
+
+    // Add warning border
+    el.classList.add("testid-border-highlight--warning");
+
+    // Position and show
+    updateLabelPosition(el, label);
+    try {
+      label.showPopover();
+    } catch {
+      // Ignore if already shown
+    }
+  });
+}
+
+export function hideDuplicateLabels(): void {
+  duplicateLabelsMap.forEach((label, el) => {
+    try {
+      label.hidePopover();
+    } catch {
+      // Ignore
+    }
+    label.remove();
+    el.classList.remove("testid-border-highlight--warning");
+  });
+  duplicateLabelsMap.clear();
+}
+
+export function getAttributeReport(): {
+  totalCount: number;
+  duplicates: { value: string; count: number }[];
+} {
+  const elements = document.querySelectorAll<HTMLElement>(
+    `[${state.customAttribute}]`
+  );
+
+  const valueCounts = new Map<string, number>();
+
+  elements.forEach((el) => {
+    const value = el.getAttribute(state.customAttribute);
+    if (value) {
+      valueCounts.set(value, (valueCounts.get(value) || 0) + 1);
+    }
+  });
+
+  // Filter to only duplicates (count > 1)
+  const duplicates: { value: string; count: number }[] = [];
+  valueCounts.forEach((count, value) => {
+    if (count > 1) {
+      duplicates.push({ value, count });
+    }
+  });
+
+  // Sort by count descending
+  duplicates.sort((a, b) => b.count - a.count);
+
+  return {
+    totalCount: elements.length,
+    duplicates,
+  };
+}

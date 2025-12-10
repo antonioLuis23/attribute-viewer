@@ -4,6 +4,7 @@ import { AttributeSettings } from "./components/AttributeSettings";
 import { DisplaySettings, DisplayMode } from "./components/DisplaySettings";
 import { HighlightSettings } from "./components/HighlightSettings";
 import { LocatorActions } from "./components/LocatorActions";
+import { ReportSection } from "./components/ReportSection";
 
 interface StorageSettings {
   displayMode?: DisplayMode;
@@ -102,6 +103,7 @@ export const Popup: React.FC = () => {
         showBorders={showBorders}
         onChange={handleShowBordersChange}
       />
+      <ReportSection attribute={customAttribute} />
       <LocatorActions
         onDownloadAll={handleDownloadAllLocators}
         onDownloadFromSelection={handleDownloadFromSelection}
